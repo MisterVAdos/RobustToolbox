@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -316,7 +317,26 @@ namespace Robust.Client
                 }
             };
 
-            _configurationManager.OnValueChanged(CVars.DisplayMaxFPS, _ => UpdateVsyncConfig());
+            _configurationManager.OnValueChanged(CVars.DisplayMaxFPS, _ => UpdateVsyncConfig()); // WH14
+
+            _configurationManager.OnValueChanged(
+                CVars.Language,
+                language =>
+                {
+                    Logger.Info($"[WH14] Language changed to: {language}");
+
+                    try
+                    {
+                        _loc.SetCulture(new CultureInfo(language));
+                        Logger.Info("[WH14] SetCulture() called successfully.");
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error($"[WH14] SetCulture failed: {e}");
+                    }
+                },
+                true);
+
             _configurationManager.OnValueChanged(CVars.DisplayVSync, _ => UpdateVsyncConfig(), invokeImmediately: true);
 
             _clyde.Ready();

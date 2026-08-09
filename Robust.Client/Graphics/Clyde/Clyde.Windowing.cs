@@ -455,6 +455,13 @@ namespace Robust.Client.Graphics.Clyde
             _windowing!.CursorSet(_mainWindow!, cursor);
         }
 
+        public void SetCursorVisible(bool visible) // WH14
+        {
+            DebugTools.AssertNotNull(_windowing);
+
+            _windowing!.CursorSetVisible(visible);
+        }
+
         private void SetWindowSize(WindowReg reg, Vector2i size)
         {
             DebugTools.AssertNotNull(_windowing);

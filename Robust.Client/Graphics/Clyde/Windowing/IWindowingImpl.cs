@@ -29,6 +29,8 @@ namespace Robust.Client.Graphics.Clyde
             ICursor CursorCreate(Image<Rgba32> image, Vector2i hotSpot);
             void CursorSet(WindowReg window, ICursor? cursor);
 
+            void CursorSetVisible(bool visible); // WH14
+
             // Window API.
             (WindowReg?, string? error) WindowCreate(
                 GLContextSpec? spec,

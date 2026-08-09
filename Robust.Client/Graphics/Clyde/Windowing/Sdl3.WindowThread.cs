@@ -117,6 +117,10 @@ internal partial class Clyde
                     WinThreadWinCursorSet(cmd);
                     break;
 
+                case CmdCursorSetVisible cmd: // WH14
+                    WinThreadCursorSetVisible(cmd);
+                    break;
+
                 case CmdWinWinSetFullscreen cmd:
                     WinThreadWinSetFullscreen(cmd);
                     break;
@@ -307,6 +311,11 @@ internal partial class Clyde
         {
             public nint Window;
             public ClydeHandle Cursor;
+        }
+
+        private sealed class CmdCursorSetVisible : CmdBase // WH14
+        {
+            public bool Visible;
         }
 
         private sealed class CmdWinWinSetFullscreen : CmdBase

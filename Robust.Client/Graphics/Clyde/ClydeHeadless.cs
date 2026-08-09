@@ -238,6 +238,11 @@ namespace Robust.Client.Graphics.Clyde
             // Nada.
         }
 
+        public void SetCursorVisible(bool visible) // WH14
+        {
+            // Nada.
+        }
+
         public void Screenshot(ScreenshotType type, CopyPixelsDelegate<Rgb24> callback, UIBox2i? subRegion = null)
         {
             // Immediately call callback with an empty buffer.

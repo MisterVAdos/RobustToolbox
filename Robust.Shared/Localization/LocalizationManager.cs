@@ -39,6 +39,7 @@ namespace Robust.Shared.Localization
 
         private (CultureInfo, FluentBundle)? _defaultCulture;
         private (CultureInfo, FluentBundle)[] _fallbackCultures = Array.Empty<(CultureInfo, FluentBundle)>();
+        public event Action? OnLanguageChanged; // WH14protected LocalizationManager()
 
         void ILocalizationManager.Initialize() => Initialize();
 
@@ -329,6 +330,10 @@ namespace Robust.Shared.Localization
 
         public void ReloadLocalizations()
         {
+            Logger.Info("ReloadLocalizations()");
+
+            Logger.Info(_contexts.Count.ToString());
+
             foreach (var (culture, context) in _contexts.ToArray())
             {
                 _loadData(_res, culture, context);
@@ -365,6 +370,12 @@ namespace Robust.Shared.Localization
                 return;
 
             DefaultCulture = culture;
+
+            Logger.Info("Current culture = " + DefaultCulture?.Name);
+
+            ReloadLocalizations();
+
+            OnLanguageChanged?.Invoke();
         }
 
         public bool HasCulture(CultureInfo culture)

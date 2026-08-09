@@ -1441,6 +1441,16 @@ namespace Robust.Shared
          */
 
         /// <summary>
+        /// Selected UI language.
+        /// Example: en-US, uk-UA
+        /// </summary>
+        public static readonly CVarDef<string> Language =
+            CVarDef.Create(
+                "interface.language",
+                "en-US",
+                CVar.CLIENTONLY | CVar.ARCHIVE);
+
+        /// <summary>
         /// Change the UITheme
         /// </summary>
         public static readonly CVarDef<string> InterfaceTheme =

@@ -11,29 +11,60 @@ varying vec2 UV2;
 varying vec2 Pos;
 varying vec4 VtxModulate;
 
-// Maybe we should merge these CPU side.
-// idk yet.
 uniform mat3 modelMatrix;
 
-// Allows us to do texture atlassing with texture coordinates 0->1
-// Input texture coordinates get mapped to this range.
 uniform vec4 modifyUV;
-// TODO CLYDE Is this still needed?
+
+// WH14 grass decor wind
+uniform float wh14DecorWindEnabled;
+uniform float wh14WindTime;
+uniform float wh14WindPower;
+uniform float wh14WindDirection;
+uniform float wh14WindGust;
 
 // [SHADER_HEADER_CODE]
 
 void main()
 {
-    vec3 transformed = projectionMatrix * viewMatrix * modelMatrix * vec3(aPos, 1.0);
+    vec2 wh14Pos = aPos;
+
+    if (wh14DecorWindEnabled > 0.5)
+    {
+        float localY = fract(tCoord.y * 3.0);
+
+        float windWeight = smoothstep(0.08, 0.95, localY);
+        windWeight = pow(windWeight, 1.35);
+
+        float wave =
+        sin(
+            wh14WindTime * 2.4
+            + aPos.x * 0.55
+            + aPos.y * 0.38);
+
+        float gust =
+        1.0
+        + sin(
+            wh14WindTime * 0.85
+            + aPos.x * 0.12
+            + aPos.y * 0.09)
+        * wh14WindGust;
+
+        vec2 windDir = vec2(cos(wh14WindDirection), sin(wh14WindDirection));
+
+        float strength = mix(0.0, 0.55, wh14WindPower);
+
+        wh14Pos += windDir * wave * gust * strength * windWeight;
+    }
+
+    vec3 transformed = projectionMatrix * viewMatrix * modelMatrix * vec3(wh14Pos, 1.0);
     vec2 VERTEX = transformed.xy;
 
     // [SHADER_CODE]
 
-    // Pixel snapping to avoid sampling issues on nvidia.
     VERTEX += 1.0;
-    VERTEX /= SCREEN_PIXEL_SIZE*2.0;
+    VERTEX /= SCREEN_PIXEL_SIZE * 2.0;
     VERTEX = floor(VERTEX + 0.5);
-    VERTEX *= SCREEN_PIXEL_SIZE*2.0;
+    VERTEX *= SCREEN_PIXEL_SIZE * 2.0;
     VERTEX -= 1.0;
 
     gl_Position = vec4(VERTEX, 0.0, 1.0);
@@ -41,8 +72,6 @@ void main()
     UV = mix(modifyUV.xy, modifyUV.zw, tCoord);
     UV2 = tCoord2;
 
-    // Negative modulation is being used as a hacky way to squeeze in lighting data.
-    // I.e., negative modulation implies we ignore the lighting.
     if (modulate.x < 0.0)
     {
         VtxModulate = -1.0 - zFromSrgb(-1.0 - modulate);

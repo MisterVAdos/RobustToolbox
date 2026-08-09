@@ -77,6 +77,19 @@ internal partial class Clyde
             SendCmd(new CmdWinCursorSet { Window = reg.Sdl3Window, Cursor = impl.Id });
         }
 
+        public void CursorSetVisible(bool visible) // WH14
+        {
+            SendCmd(new CmdCursorSetVisible { Visible = visible });
+        }
+
+        private void WinThreadCursorSetVisible(CmdCursorSetVisible cmd)
+        {
+            if (cmd.Visible)
+                SDL.SDL_ShowCursor();
+            else
+                SDL.SDL_HideCursor();
+        } // WH14-end
+
         private void WinThreadWinCursorSet(CmdWinCursorSet cmd)
         {
             var window = cmd.Window;

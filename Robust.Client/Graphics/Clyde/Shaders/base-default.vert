@@ -15,20 +15,20 @@ uniform mat3 modelMatrix;
 
 uniform vec4 modifyUV;
 
-// WH14 grass decor wind
-uniform float wh14DecorWindEnabled;
-uniform float wh14WindTime;
-uniform float wh14WindPower;
-uniform float wh14WindDirection;
-uniform float wh14WindGust;
+// Grid decor wind animation.
+uniform float gridDecorWindEnabled;
+uniform float gridDecorWindTime;
+uniform float gridDecorWindPower;
+uniform float gridDecorWindDirection;
+uniform float gridDecorWindGust;
 
 // [SHADER_HEADER_CODE]
 
 void main()
 {
-    vec2 wh14Pos = aPos;
+    vec2 gridDecorPos = aPos;
 
-    if (wh14DecorWindEnabled > 0.5)
+    if (gridDecorWindEnabled > 0.5)
     {
         float localY = fract(tCoord.y * 3.0);
 
@@ -37,26 +37,26 @@ void main()
 
         float wave =
         sin(
-            wh14WindTime * 2.4
+            gridDecorWindTime * 2.4
             + aPos.x * 0.55
             + aPos.y * 0.38);
 
         float gust =
         1.0
         + sin(
-            wh14WindTime * 0.85
+            gridDecorWindTime * 0.85
             + aPos.x * 0.12
             + aPos.y * 0.09)
-        * wh14WindGust;
+        * gridDecorWindGust;
 
-        vec2 windDir = vec2(cos(wh14WindDirection), sin(wh14WindDirection));
+        vec2 windDir = vec2(cos(gridDecorWindDirection), sin(gridDecorWindDirection));
 
-        float strength = mix(0.0, 0.55, wh14WindPower);
+        float strength = mix(0.0, 0.55, gridDecorWindPower);
 
-        wh14Pos += windDir * wave * gust * strength * windWeight;
+        gridDecorPos += windDir * wave * gust * strength * windWeight;
     }
 
-    vec3 transformed = projectionMatrix * viewMatrix * modelMatrix * vec3(wh14Pos, 1.0);
+    vec3 transformed = projectionMatrix * viewMatrix * modelMatrix * vec3(gridDecorPos, 1.0);
     vec2 VERTEX = transformed.xy;
 
     // [SHADER_CODE]

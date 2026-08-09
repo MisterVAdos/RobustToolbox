@@ -44,14 +44,14 @@ namespace Robust.Client.Graphics.Clyde
         private List<Entity<MapGridComponent>> _grids = new();
         private bool _drawTileEdges;
 
-        // WH14 decor wind animation
-        private float _whDecorTime;
+        // Grid decor wind animation.
+        private float _gridDecorTime;
 
         private float _gridDecorWindPower;
         private float _gridDecorWindDirectionRadians;
         private float _gridDecorWindGustPower;
 
-        private Texture? _whDecorClumpAtlasTexture;
+        private Texture? _gridDecorAtlasTexture;
 
         private void RenderTileEdgesChanges(bool value)
         {
@@ -73,10 +73,10 @@ namespace Robust.Client.Graphics.Clyde
         {
             var mapId = eye.Position.MapId;
 
-            _whDecorTime += 1f / 60f;
+            _gridDecorTime += 1f / 60f;
 
-// WH14: shader wind. Decor mesh більше не перебудовується заради вітру.
-            var whDecorAnimate = false;
+            // Grid decor wind is handled in the shader, so the decor mesh does not need
+            // to be rebuilt when wind parameters change.
 
             if (!_mapManager.MapExists(mapId))
             {
@@ -120,7 +120,7 @@ namespace Robust.Client.Graphics.Clyde
                     DebugTools.Assert(chunk.FilledTiles > 0);
                     var datum = EnsureChunkInitialized(data, chunk, mapGrid);
 
-                    if (datum.Dirty) // WH14
+                    if (datum.Dirty)
                     {
                         _updateChunkMesh(mapGrid, chunk, datum);
                     }
@@ -134,7 +134,7 @@ namespace Robust.Client.Graphics.Clyde
                     }
 
                     if (!_drawTileEdges)
-                        continue; // WH14-end
+                        continue;
 
                     // Dirty edge tiles for next step.
                     datum.EdgeDirty = true;
@@ -193,22 +193,22 @@ namespace Robust.Client.Graphics.Clyde
                         CheckGlError();
                     }
 
-                    // WH14 Decor pass
+                    // Grid decor pass.
                     if (datum.DecorCount > 0)
                     {
-                        var whDecorTexture = WH14GetDecorClumpAtlasTexture();
+                        var gridDecorTexture = GetGridDecorAtlasTexture();
 
-                        SetTexture(TextureUnit.Texture0, whDecorTexture);
-                        SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) whDecorTexture);
+                        SetTexture(TextureUnit.Texture0, gridDecorTexture);
+                        SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) gridDecorTexture);
                         gridProgram.SetUniformTextureMaybe(UniIMainTexture, TextureUnit.Texture0);
                         gridProgram.SetUniformTextureMaybe(UniILightTexture, TextureUnit.Texture1);
                         gridProgram.SetUniform(UniIModUV, new Vector4(0, 0, 1, 1));
 
-                        gridProgram.SetUniform("wh14DecorWindEnabled", 1f);
-                        gridProgram.SetUniform("wh14WindTime", _whDecorTime);
-                        gridProgram.SetUniform("wh14WindPower", _gridDecorWindPower);
-                        gridProgram.SetUniform("wh14WindDirection", _gridDecorWindDirectionRadians);
-                        gridProgram.SetUniform("wh14WindGust", _gridDecorWindGustPower);
+                        gridProgram.SetUniform("gridDecorWindEnabled", 1f);
+                        gridProgram.SetUniform("gridDecorWindTime", _gridDecorTime);
+                        gridProgram.SetUniform("gridDecorWindPower", _gridDecorWindPower);
+                        gridProgram.SetUniform("gridDecorWindDirection", _gridDecorWindDirectionRadians);
+                        gridProgram.SetUniform("gridDecorWindGust", _gridDecorWindGustPower);
 
                         BindVertexArray(datum.DecorVAO);
                         CheckGlError();
@@ -223,7 +223,7 @@ namespace Robust.Client.Graphics.Clyde
 
                         CheckGlError();
 
-                        gridProgram.SetUniform("wh14DecorWindEnabled", 0f);
+                        gridProgram.SetUniform("gridDecorWindEnabled", 0f);
 
                         SetTexture(TextureUnit.Texture0, _tileDefinitionManager.TileTextureAtlas);
                         SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) _tileDefinitionManager.TileTextureAtlas);
@@ -425,12 +425,12 @@ namespace Robust.Client.Graphics.Clyde
             datum.EdgeDirty = false;
         }
 
-        private bool WH14HasSurfaceDecor(Tile tile)
+        private bool HasGridDecor(Tile tile)
         {
-            return WH14GetSurfaceDecor(tile) != null;
+            return GetGridDecorType(tile) != null;
         }
 
-        private string? WH14GetSurfaceDecor(Tile tile)
+        private string? GetGridDecorType(Tile tile)
         {
             if (tile.IsEmpty)
                 return null;
@@ -451,7 +451,7 @@ namespace Robust.Client.Graphics.Clyde
             return null;
         }
 
-        private bool WH14HasSurfaceDecorAt(MapGridComponent grid, float x, float y)
+        private bool HasGridDecorAt(MapGridComponent grid, float x, float y)
         {
             var maps = _entityManager.System<SharedMapSystem>();
             var tilePos = new Vector2i((int)MathF.Floor(x), (int)MathF.Floor(y));
@@ -459,22 +459,22 @@ namespace Robust.Client.Graphics.Clyde
             if (!maps.TryGetTile(grid, tilePos, out var tile))
                 return false;
 
-            return WH14HasSurfaceDecor(tile);
+            return HasGridDecor(tile);
         }
 
-        private Texture WH14GetDecorClumpAtlasTexture()
+        private Texture GetGridDecorAtlasTexture()
         {
-            if (_whDecorClumpAtlasTexture != null)
-                return _whDecorClumpAtlasTexture;
+            if (_gridDecorAtlasTexture != null)
+                return _gridDecorAtlasTexture;
 
             var cache = IoCManager.Resolve<IResourceCache>();
-            _whDecorClumpAtlasTexture = cache.GetResource<TextureResource>(
+            _gridDecorAtlasTexture = cache.GetResource<TextureResource>(
                 "/Textures/_WH14/Planetary/Decor/grass_clumps_atlas.png").Texture;
 
-            return _whDecorClumpAtlasTexture;
+            return _gridDecorAtlasTexture;
         }
 
-        private void _updateChunkDecor( // WH14
+        private void _updateChunkDecor(
             Entity<MapGridComponent> grid,
             MapChunk chunk,
             MapChunkData datum)
@@ -494,7 +494,7 @@ namespace Robust.Client.Graphics.Clyde
                 for (ushort y = 0; y < chunkSize; y += PatchSize)
                 {
                     var tile = chunk.GetTile(x, y);
-                    var decor = WH14GetSurfaceDecor(tile);
+                    var decor = GetGridDecorType(tile);
 
                     if (decor == null)
                         continue;
@@ -503,7 +503,7 @@ namespace Robust.Client.Graphics.Clyde
                     var gridY = y + chunkOriginScaled.Y;
 
                     var patchSeed =
-                        WH14Hash01(
+                        GridDecorHash01(
                             chunk.Indices.X * 100 + x,
                             chunk.Indices.Y * 100 + y);
 
@@ -515,11 +515,11 @@ namespace Robust.Client.Graphics.Clyde
                             (i + 32) * GetQuadBatchIndexCount() >= indexBuffer.Length)
                             break;
 
-                        var region = WH14GetDecorAtlasRegion(
+                        var region = GetGridDecorAtlasRegion(
                             decor,
                             gridX * 92821 + gridY * 68917 + cluster * 193);
 
-                        i = WH14WriteGrassTextureClumpToBuffers(
+                        i = WriteGridDecorTextureClumpToBuffers(
                             i,
                             grid.Comp,
                             gridX,
@@ -598,17 +598,17 @@ namespace Robust.Client.Graphics.Clyde
             datum.EdgeVBO = edgeVbo;
             datum.EdgeVAO = edgeVao;
 
-            // WH14 DecorVAO
+            // Grid decor buffers.
             var decorVao = GenVertexArray();
             BindVertexArray(decorVao);
             CheckGlError();
 
             var decorVbo = new GLBuffer(this, BufferTarget.ArrayBuffer, BufferUsageHint.DynamicDraw,
-                vboSize * 64, $"Grid {grid.Owner} chunk {chunk.Indices} WHDecorVBO");
+                vboSize * 64, $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorVBO");
             var decorEbo = new GLBuffer(this, BufferTarget.ElementArrayBuffer, BufferUsageHint.DynamicDraw,
-                eboSize * 64, $"Grid {grid.Owner} chunk {chunk.Indices} WHDecorEBO");
+                eboSize * 64, $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorEBO");
 
-            ObjectLabelMaybe(ObjectLabelIdentifier.VertexArray, decorVao, $"Grid {grid.Owner} chunk {chunk.Indices} WHDecorVAO");
+            ObjectLabelMaybe(ObjectLabelIdentifier.VertexArray, decorVao, $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorVAO");
             SetupVAOLayout();
             CheckGlError();
 
@@ -643,7 +643,7 @@ namespace Robust.Client.Graphics.Clyde
             var gridData = _mapChunkData.GetOrNew(args.Entity);
             foreach (var change in args.Changes)
             {
-                if (gridData.TryGetValue(change.ChunkIndex, out var data)) // WH14
+                if (gridData.TryGetValue(change.ChunkIndex, out var data))
                 {
                     data.Dirty = true;
                     data.DecorDirty = true;
@@ -678,7 +678,7 @@ namespace Robust.Client.Graphics.Clyde
             return field;
         }
 
-        private static float WH14Hash01(int x, int y)
+        private static float GridDecorHash01(int x, int y)
         {
             unchecked
             {
@@ -765,19 +765,19 @@ namespace Robust.Client.Graphics.Clyde
             public GLBuffer EdgeEBO = default!;
             public int EdgeCount;
 
-            public bool DecorDirty = true; // WH14
+            public bool DecorDirty = true;
 
             public uint DecorVAO;
             public GLBuffer DecorVBO = default!;
             public GLBuffer DecorEBO = default!;
-            public int DecorCount; // WH14-end
+            public int DecorCount;
 
             public MapChunkData()
             {
             }
         }
 
-        private static Box2 WH14GetDecorAtlasRegion(string decor, int seed)
+        private static Box2 GetGridDecorAtlasRegion(string decor, int seed)
         {
             const int Columns = 3;
             const int Rows = 3;
@@ -810,7 +810,7 @@ namespace Robust.Client.Graphics.Clyde
             return new Box2(left, bottom, right, top);
         }
 
-        private static Vector2 WH14RandomPatchPosition( // WH14
+        private static Vector2 GridDecorRandomPatchPosition(
             int patchX,
             int patchY,
             int patchSize,
@@ -818,87 +818,90 @@ namespace Robust.Client.Graphics.Clyde
         {
             var px =
                 patchX +
-                WH14Hash01(seed * 17, seed * 31) * patchSize;
+                GridDecorHash01(seed * 17, seed * 31) * patchSize;
 
             var py =
                 patchY +
-                WH14Hash01(seed * 53, seed * 11) * patchSize;
+                GridDecorHash01(seed * 53, seed * 11) * patchSize;
 
             return new Vector2(px, py);
         }
 
-private int WH14WriteGrassTextureClumpToBuffers(
-    int i,
-    MapGridComponent grid,
-    int patchX,
-    int patchY,
-    int patchSize,
-    Span<Vertex2D> vertexBuffer,
-    Span<ushort> indexBuffer,
-    Box2 region,
-    int clusterIndex)
-{
-    var pos = WH14RandomPatchPosition(
-        patchX,
-        patchY,
-        patchSize,
-        patchX * 1000 + patchY * 100 + clusterIndex);
+        private int WriteGridDecorTextureClumpToBuffers(
+            int i,
+            MapGridComponent grid,
+            int patchX,
+            int patchY,
+            int patchSize,
+            Span<Vertex2D> vertexBuffer,
+            Span<ushort> indexBuffer,
+            Box2 region,
+            int clusterIndex)
+        {
+            var pos = GridDecorRandomPatchPosition(
+                patchX,
+                patchY,
+                patchSize,
+                patchX * 1000 + patchY * 100 + clusterIndex);
 
-    if (!WH14HasSurfaceDecorAt(grid, pos.X, pos.Y))
-        return i;
+            if (!HasGridDecorAt(grid, pos.X, pos.Y))
+                return i;
 
-    var baseTileX = (int)MathF.Floor(pos.X);
-    var baseTileY = (int)MathF.Floor(pos.Y);
+            var baseTileX = (int) MathF.Floor(pos.X);
+            var baseTileY = (int) MathF.Floor(pos.Y);
 
-    // Якщо пучок занадто близько до північної межі, а зверху вже не трав’яний тайл —
-    // не малюємо його взагалі, а не стискаємо. Так не буде “вилазіння” і спотворень.
-    if (pos.Y > baseTileY + 0.72f &&
-        !WH14HasSurfaceDecorAt(grid, baseTileX + 0.5f, baseTileY + 1.05f))
-    {
-        return i;
-    }
+            // Якщо пучок занадто близько до північної межі, а зверху вже не трав’яний тайл —
+            // не малюємо його взагалі, а не стискаємо. Так не буде “вилазіння” і спотворень.
+            if (pos.Y > baseTileY + 0.72f &&
+                !HasGridDecorAt(grid, baseTileX + 0.5f, baseTileY + 1.05f))
+            {
+                return i;
+            }
 
-    var scaleSeed = WH14Hash01(baseTileX + clusterIndex * 41, baseTileY - clusterIndex * 19);
+            var scaleSeed = GridDecorHash01(baseTileX + clusterIndex * 41, baseTileY - clusterIndex * 19);
 
-    // Робимо PNG-пучок помітно більшим, бо сама текстура має прозорі поля.
-    var width = MathHelper.Lerp(0.85f, 1.25f, scaleSeed);
-    var height = MathHelper.Lerp(0.70f, 1.05f, WH14Hash01(baseTileX - 13, baseTileY + clusterIndex * 23));
+            // Робимо PNG-пучок помітно більшим, бо сама текстура має прозорі поля.
+            var width = MathHelper.Lerp(0.85f, 1.25f, scaleSeed);
+            var height = MathHelper.Lerp(
+                0.70f,
+                1.05f,
+                GridDecorHash01(baseTileX - 13, baseTileY + clusterIndex * 23));
 
-    // Прив’язуємо низ пучка до землі. Текстура росте вгору.
-    var bottom = pos.Y - 0.08f;
-    var top = bottom + height;
+            // Прив’язуємо низ пучка до землі. Текстура росте вгору.
+            var bottom = pos.Y - 0.08f;
+            var top = bottom + height;
 
-    if (top > baseTileY + 0.98f &&
-        !WH14HasSurfaceDecorAt(grid, baseTileX + 0.5f, baseTileY + 1.05f))
-    {
-        top = baseTileY + 0.98f;
-    }
+            if (top > baseTileY + 0.98f &&
+                !HasGridDecorAt(grid, baseTileX + 0.5f, baseTileY + 1.05f))
+            {
+                top = baseTileY + 0.98f;
+            }
 
-    var centerX = pos.X;
-    var left = centerX - width * 0.5f;
-    var right = centerX + width * 0.5f;
+            var centerX = pos.X;
+            var left = centerX - width * 0.5f;
+            var right = centerX + width * 0.5f;
 
-    // ВАЖЛИВО: не фарбуємо текстуру в зелений.
-    // Даємо їй власний колір із PNG, тільки трохи контролюємо прозорість.
-    var color = Color.White.WithAlpha(0.88f);
+            // Не фарбуємо текстуру: використовуємо власний колір PNG,
+            // лише трохи контролюючи прозорість.
+            var color = Color.White.WithAlpha(0.88f);
 
-    var vIdx = i * 4;
+            var vIdx = i * 4;
 
-    const float UvEpsilon = 0.0015f;
+            const float UvEpsilon = 0.0015f;
 
-    var uvBottom = region.Bottom + UvEpsilon;
-    var uvTop = region.Top - UvEpsilon;
+            var uvBottom = region.Bottom + UvEpsilon;
+            var uvTop = region.Top - UvEpsilon;
 
-    vertexBuffer[vIdx + 0] = new Vertex2D(left, bottom, region.Left, uvBottom, color);
-    vertexBuffer[vIdx + 1] = new Vertex2D(right, bottom, region.Right, uvBottom, color);
-    vertexBuffer[vIdx + 2] = new Vertex2D(right, top, region.Right, uvTop, color);
-    vertexBuffer[vIdx + 3] = new Vertex2D(left, top, region.Left, uvTop, color);
+            vertexBuffer[vIdx + 0] = new Vertex2D(left, bottom, region.Left, uvBottom, color);
+            vertexBuffer[vIdx + 1] = new Vertex2D(right, bottom, region.Right, uvBottom, color);
+            vertexBuffer[vIdx + 2] = new Vertex2D(right, top, region.Right, uvTop, color);
+            vertexBuffer[vIdx + 3] = new Vertex2D(left, top, region.Left, uvTop, color);
 
-    var nIdx = i * GetQuadBatchIndexCount();
-    var tIdx = (ushort)(i * 4);
-    QuadBatchIndexWrite(indexBuffer, ref nIdx, tIdx);
+            var nIdx = i * GetQuadBatchIndexCount();
+            var tIdx = (ushort) (i * 4);
+            QuadBatchIndexWrite(indexBuffer, ref nIdx, tIdx);
 
-    return i + 1;
-}
+            return i + 1;
+        }
     }
 }

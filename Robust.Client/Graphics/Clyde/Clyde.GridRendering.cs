@@ -12,7 +12,6 @@ using Robust.Shared.Map.Components;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 using Robust.Shared.IoC;
-using Robust.Shared._WH14.Planetary; // WH14
 
 namespace Robust.Client.Graphics.Clyde
 {
@@ -20,6 +19,16 @@ namespace Robust.Client.Graphics.Clyde
     {
         private readonly Dictionary<EntityUid, Dictionary<Vector2i, MapChunkData>> _mapChunkData =
             new();
+
+        public void SetGridDecorWind(
+            float power,
+            float directionRadians,
+            float gustPower)
+        {
+            _gridDecorWindPower = Math.Clamp(power, 0f, 1f);
+            _gridDecorWindDirectionRadians = directionRadians;
+            _gridDecorWindGustPower = Math.Clamp(gustPower, 0f, 1f);
+        }
 
         /// <summary>
         /// To avoid spamming errors we'll just log it once and move on.
@@ -37,6 +46,10 @@ namespace Robust.Client.Graphics.Clyde
 
         // WH14 decor wind animation
         private float _whDecorTime;
+
+        private float _gridDecorWindPower;
+        private float _gridDecorWindDirectionRadians;
+        private float _gridDecorWindGustPower;
 
         private Texture? _whDecorClumpAtlasTexture;
 
@@ -193,9 +206,9 @@ namespace Robust.Client.Graphics.Clyde
 
                         gridProgram.SetUniform("wh14DecorWindEnabled", 1f);
                         gridProgram.SetUniform("wh14WindTime", _whDecorTime);
-                        gridProgram.SetUniform("wh14WindPower", WH14PlanetaryWindState.WindPower);
-                        gridProgram.SetUniform("wh14WindDirection", WH14PlanetaryWindState.WindDirectionRadians);
-                        gridProgram.SetUniform("wh14WindGust", WH14PlanetaryWindState.WindGustPower);
+                        gridProgram.SetUniform("wh14WindPower", _gridDecorWindPower);
+                        gridProgram.SetUniform("wh14WindDirection", _gridDecorWindDirectionRadians);
+                        gridProgram.SetUniform("wh14WindGust", _gridDecorWindGustPower);
 
                         BindVertexArray(datum.DecorVAO);
                         CheckGlError();

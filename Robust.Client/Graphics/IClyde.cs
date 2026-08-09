@@ -38,6 +38,15 @@ namespace Robust.Client.Graphics
         void SetWindowMonitor(IClydeMonitor monitor);
 
         /// <summary>
+        ///     WH14 .
+        /// </summary>
+
+        void SetGridDecorWind(
+            float power,
+            float directionRadians,
+            float gustPower);
+
+        /// <summary>
         ///     This is the magic method to make the game window ping you in the task bar.
         /// </summary>
         void RequestWindowAttention();

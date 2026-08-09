@@ -42,6 +42,13 @@ namespace Robust.Client.Graphics.Clyde
             return new DummyShaderInstance();
         }
 
+        public void SetGridDecorWind(
+            float power,
+            float directionRadians,
+            float gustPower)
+        {
+        }
+
         public ClydeHeadless()
         {
             SixLabors.ImageSharp.Configuration.Default.PreferContiguousImageBuffers = true;

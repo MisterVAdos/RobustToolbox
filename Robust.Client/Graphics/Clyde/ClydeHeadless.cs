@@ -49,6 +49,18 @@ namespace Robust.Client.Graphics.Clyde
         {
         }
 
+        public void SetGridDecorConfiguration(
+            Texture atlasTexture,
+            int atlasColumns,
+            int atlasRows,
+            IReadOnlyList<int> tileRows)
+        {
+        }
+
+        public void ClearGridDecorConfiguration()
+        {
+        }
+
         public ClydeHeadless()
         {
             SixLabors.ImageSharp.Configuration.Default.PreferContiguousImageBuffers = true;
@@ -245,7 +257,7 @@ namespace Robust.Client.Graphics.Clyde
             // Nada.
         }
 
-        public void SetCursorVisible(bool visible) // WH14
+        public void SetCursorVisible(bool visible)
         {
             // Nada.
         }

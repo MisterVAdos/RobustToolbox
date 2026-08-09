@@ -38,13 +38,34 @@ namespace Robust.Client.Graphics
         void SetWindowMonitor(IClydeMonitor monitor);
 
         /// <summary>
-        ///     WH14 .
+        ///     Updates wind parameters used by generic grid decor rendering.
         /// </summary>
 
         void SetGridDecorWind(
             float power,
             float directionRadians,
             float gustPower);
+
+        /// <summary>
+        ///     Configures generic tile-based grid decor rendering.
+        ///     The index in <paramref name="tileRows"/> corresponds to a tile type ID.
+        ///     A value of -1 means that the tile has no grid decor; otherwise the value
+        ///     specifies the atlas row used by that tile.
+        /// </summary>
+        /// <remarks>
+        ///     The implementation takes its own snapshot of <paramref name="tileRows"/>,
+        ///     so callers may safely reuse or modify their collection afterwards.
+        /// </remarks>
+        void SetGridDecorConfiguration(
+            Texture atlasTexture,
+            int atlasColumns,
+            int atlasRows,
+            IReadOnlyList<int> tileRows);
+
+        /// <summary>
+        ///     Removes the currently configured grid decor data.
+        /// </summary>
+        void ClearGridDecorConfiguration();
 
         /// <summary>
         ///     This is the magic method to make the game window ping you in the task bar.
@@ -131,7 +152,7 @@ namespace Robust.Client.Graphics
         /// <exception cref="ObjectDisposedException">Thrown if the cursor object passed has been disposed.</exception>
         void SetCursor(ICursor? cursor);
 
-        void SetCursorVisible(bool visible); // WH14
+        void SetCursorVisible(bool visible);
 
         /// <summary>
         ///     Make a screenshot of the game, next render frame.

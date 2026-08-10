@@ -179,44 +179,7 @@ namespace Robust.Client.Graphics.Clyde
                         CheckGlError();
                     }
 
-                    // Grid decor pass.
-                    if (datum.DecorCount > 0 &&
-                        _configuredGridDecorAtlasTexture is { } gridDecorTexture)
-                    {
-
-                        SetTexture(TextureUnit.Texture0, gridDecorTexture);
-                        SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) gridDecorTexture);
-                        gridProgram.SetUniformTextureMaybe(UniIMainTexture, TextureUnit.Texture0);
-                        gridProgram.SetUniformTextureMaybe(UniILightTexture, TextureUnit.Texture1);
-                        gridProgram.SetUniform(UniIModUV, new Vector4(0, 0, 1, 1));
-
-                        gridProgram.SetUniform("gridDecorWindEnabled", 1f);
-                        gridProgram.SetUniform("gridDecorWindTime", _gridDecorTime);
-                        gridProgram.SetUniform("gridDecorWindPower", _gridDecorWindPower);
-                        gridProgram.SetUniform("gridDecorWindDirection", _gridDecorWindDirectionRadians);
-                        gridProgram.SetUniform("gridDecorWindGust", _gridDecorWindGustPower);
-
-                        BindVertexArray(datum.DecorVAO);
-                        CheckGlError();
-
-                        _debugStats.LastGLDrawCalls += 1;
-
-                        GL.DrawElements(
-                            GetQuadGLPrimitiveType(),
-                            datum.DecorCount * GetQuadBatchIndexCount(),
-                            DrawElementsType.UnsignedShort,
-                            0);
-
-                        CheckGlError();
-
-                        gridProgram.SetUniform("gridDecorWindEnabled", 0f);
-
-                        SetTexture(TextureUnit.Texture0, _tileDefinitionManager.TileTextureAtlas);
-                        SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) _tileDefinitionManager.TileTextureAtlas);
-                        gridProgram.SetUniformTextureMaybe(UniIMainTexture, TextureUnit.Texture0);
-                        gridProgram.SetUniformTextureMaybe(UniILightTexture, TextureUnit.Texture1);
-                        gridProgram.SetUniform(UniIModUV, new Vector4(0, 0, 1, 1));
-                    }
+                    DrawGridDecor(datum, gridProgram);
                 }
 
                 requiresFlush = false;
@@ -461,26 +424,7 @@ namespace Robust.Client.Graphics.Clyde
             datum.EdgeVBO = edgeVbo;
             datum.EdgeVAO = edgeVao;
 
-            // Grid decor buffers.
-            var decorVao = GenVertexArray();
-            BindVertexArray(decorVao);
-            CheckGlError();
-
-            var decorVbo = new GLBuffer(this, BufferTarget.ArrayBuffer, BufferUsageHint.DynamicDraw,
-                vboSize * 64, $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorVBO");
-            var decorEbo = new GLBuffer(this, BufferTarget.ElementArrayBuffer, BufferUsageHint.DynamicDraw,
-                eboSize * 64, $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorEBO");
-
-            ObjectLabelMaybe(ObjectLabelIdentifier.VertexArray, decorVao, $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorVAO");
-            SetupVAOLayout();
-            CheckGlError();
-
-            decorVbo.Use();
-            decorEbo.Use();
-
-            datum.DecorEBO = decorEbo;
-            datum.DecorVBO = decorVbo;
-            datum.DecorVAO = decorVao;
+            InitializeGridDecorBuffers(grid, chunk, datum, vboSize, eboSize);
         }
 
         private void DeleteChunk(MapChunkData data)
@@ -495,10 +439,7 @@ namespace Robust.Client.Graphics.Clyde
             data.EdgeVBO.Delete();
             data.EdgeEBO.Delete();
 
-            DeleteVertexArray(data.DecorVAO);
-            CheckGlError();
-            data.DecorVBO.Delete();
-            data.DecorEBO.Delete();
+            DeleteGridDecorBuffers(data);
         }
 
         private void _updateTileMapOnUpdate(ref TileChangedEvent args)
@@ -509,7 +450,7 @@ namespace Robust.Client.Graphics.Clyde
                 if (gridData.TryGetValue(change.ChunkIndex, out var data))
                 {
                     data.Dirty = true;
-                    data.DecorDirty = true;
+                    MarkGridDecorDirty(data);
                 }
             }
         }
@@ -604,7 +545,7 @@ namespace Robust.Client.Graphics.Clyde
             QuadBatchIndexWrite(indexBuffer, ref nIdx, tIdx);
         }
 
-        private sealed class MapChunkData
+        private sealed partial class MapChunkData
         {
             public bool EdgeDirty = true;
             public bool Dirty = true;
@@ -618,13 +559,6 @@ namespace Robust.Client.Graphics.Clyde
             public GLBuffer EdgeVBO = default!;
             public GLBuffer EdgeEBO = default!;
             public int EdgeCount;
-
-            public bool DecorDirty = true;
-
-            public uint DecorVAO;
-            public GLBuffer DecorVBO = default!;
-            public GLBuffer DecorEBO = default!;
-            public int DecorCount;
 
             public MapChunkData()
             {

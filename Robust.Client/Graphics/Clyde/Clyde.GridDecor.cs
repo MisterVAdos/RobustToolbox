@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using OpenToolkit.Graphics.OpenGL4;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Graphics;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Maths;
@@ -11,6 +12,113 @@ namespace Robust.Client.Graphics.Clyde
 {
     internal partial class Clyde
     {
+
+        private void DrawGridDecor(MapChunkData datum, GLShaderProgram gridProgram)
+        {
+            if (datum.DecorCount <= 0 ||
+                _configuredGridDecorAtlasTexture is not { } gridDecorTexture)
+            {
+                return;
+            }
+
+            SetTexture(TextureUnit.Texture0, gridDecorTexture);
+            SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) gridDecorTexture);
+            gridProgram.SetUniformTextureMaybe(UniIMainTexture, TextureUnit.Texture0);
+            gridProgram.SetUniformTextureMaybe(UniILightTexture, TextureUnit.Texture1);
+            gridProgram.SetUniform(UniIModUV, new Vector4(0, 0, 1, 1));
+
+            gridProgram.SetUniform("gridDecorWindEnabled", 1f);
+            gridProgram.SetUniform("gridDecorWindTime", _gridDecorTime);
+            gridProgram.SetUniform("gridDecorWindPower", _gridDecorWindPower);
+            gridProgram.SetUniform("gridDecorWindDirection", _gridDecorWindDirectionRadians);
+            gridProgram.SetUniform("gridDecorWindGust", _gridDecorWindGustPower);
+
+            BindVertexArray(datum.DecorVAO);
+            CheckGlError();
+
+            _debugStats.LastGLDrawCalls += 1;
+
+            GL.DrawElements(
+                GetQuadGLPrimitiveType(),
+                datum.DecorCount * GetQuadBatchIndexCount(),
+                DrawElementsType.UnsignedShort,
+                0);
+
+            CheckGlError();
+
+            gridProgram.SetUniform("gridDecorWindEnabled", 0f);
+
+            SetTexture(TextureUnit.Texture0, _tileDefinitionManager.TileTextureAtlas);
+            SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) _tileDefinitionManager.TileTextureAtlas);
+            gridProgram.SetUniformTextureMaybe(UniIMainTexture, TextureUnit.Texture0);
+            gridProgram.SetUniformTextureMaybe(UniILightTexture, TextureUnit.Texture1);
+            gridProgram.SetUniform(UniIModUV, new Vector4(0, 0, 1, 1));
+        }
+
+        private void InitializeGridDecorBuffers(
+            Entity<MapGridComponent> grid,
+            MapChunk chunk,
+            MapChunkData datum,
+            int vboSize,
+            int eboSize)
+        {
+            var decorVao = GenVertexArray();
+            BindVertexArray(decorVao);
+            CheckGlError();
+
+            var decorVbo = new GLBuffer(
+                this,
+                BufferTarget.ArrayBuffer,
+                BufferUsageHint.DynamicDraw,
+                vboSize * 64,
+                $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorVBO");
+
+            var decorEbo = new GLBuffer(
+                this,
+                BufferTarget.ElementArrayBuffer,
+                BufferUsageHint.DynamicDraw,
+                eboSize * 64,
+                $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorEBO");
+
+            ObjectLabelMaybe(
+                ObjectLabelIdentifier.VertexArray,
+                decorVao,
+                $"Grid {grid.Owner} chunk {chunk.Indices} GridDecorVAO");
+
+            SetupVAOLayout();
+            CheckGlError();
+
+            decorVbo.Use();
+            decorEbo.Use();
+
+            datum.DecorEBO = decorEbo;
+            datum.DecorVBO = decorVbo;
+            datum.DecorVAO = decorVao;
+        }
+
+        private void DeleteGridDecorBuffers(MapChunkData data)
+        {
+            DeleteVertexArray(data.DecorVAO);
+            CheckGlError();
+            data.DecorVBO.Delete();
+            data.DecorEBO.Delete();
+        }
+
+        private static void MarkGridDecorDirty(MapChunkData data)
+        {
+            data.DecorDirty = true;
+        }
+
+        private sealed partial class MapChunkData
+        {
+            public bool DecorDirty = true;
+
+            public uint DecorVAO;
+            public GLBuffer DecorVBO = default!;
+            public GLBuffer DecorEBO = default!;
+            public int DecorCount;
+        }
+
         public void SetGridDecorWind(
             float power,
             float directionRadians,

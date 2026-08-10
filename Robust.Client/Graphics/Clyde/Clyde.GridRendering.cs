@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using OpenToolkit.Graphics.OpenGL4;
-using Robust.Client.ResourceManagement;
 using Robust.Shared.Enums;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Graphics;
@@ -11,7 +9,6 @@ using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
-using Robust.Shared.IoC;
 
 namespace Robust.Client.Graphics.Clyde
 {
@@ -50,8 +47,6 @@ namespace Robust.Client.Graphics.Clyde
         private float _gridDecorWindPower;
         private float _gridDecorWindDirectionRadians;
         private float _gridDecorWindGustPower;
-
-        private Texture? _gridDecorAtlasTexture;
 
         private void RenderTileEdgesChanges(bool value)
         {
@@ -194,9 +189,9 @@ namespace Robust.Client.Graphics.Clyde
                     }
 
                     // Grid decor pass.
-                    if (datum.DecorCount > 0)
+                    if (datum.DecorCount > 0 &&
+                        _configuredGridDecorAtlasTexture is { } gridDecorTexture)
                     {
-                        var gridDecorTexture = GetGridDecorAtlasTexture();
 
                         SetTexture(TextureUnit.Texture0, gridDecorTexture);
                         SetupGlobalUniformsImmediate(gridProgram, (ClydeTexture) gridDecorTexture);
@@ -427,28 +422,20 @@ namespace Robust.Client.Graphics.Clyde
 
         private bool HasGridDecor(Tile tile)
         {
-            return GetGridDecorType(tile) != null;
+            return GetGridDecorRow(tile) != null;
         }
 
-        private string? GetGridDecorType(Tile tile)
+        private int? GetGridDecorRow(Tile tile)
         {
             if (tile.IsEmpty)
                 return null;
 
-            if (!_tileDefinitionManager.TryGetDefinition(tile.TypeId, out var tileDef))
+            if (tile.TypeId >= _configuredGridDecorRowsByTileType.Length)
                 return null;
 
-            var type = tileDef.GetType();
+            var row = _configuredGridDecorRowsByTileType[tile.TypeId];
 
-            var field = type.GetField("WHSurfaceDecor");
-            if (field?.GetValue(tileDef) is string fieldDecor && !string.IsNullOrWhiteSpace(fieldDecor))
-                return fieldDecor;
-
-            var prop = type.GetProperty("WHSurfaceDecor");
-            if (prop?.GetValue(tileDef) is string propDecor && !string.IsNullOrWhiteSpace(propDecor))
-                return propDecor;
-
-            return null;
+            return row >= 0 ? row : null;
         }
 
         private bool HasGridDecorAt(MapGridComponent grid, float x, float y)
@@ -460,18 +447,6 @@ namespace Robust.Client.Graphics.Clyde
                 return false;
 
             return HasGridDecor(tile);
-        }
-
-        private Texture GetGridDecorAtlasTexture()
-        {
-            if (_gridDecorAtlasTexture != null)
-                return _gridDecorAtlasTexture;
-
-            var cache = IoCManager.Resolve<IResourceCache>();
-            _gridDecorAtlasTexture = cache.GetResource<TextureResource>(
-                "/Textures/_WH14/Planetary/Decor/grass_clumps_atlas.png").Texture;
-
-            return _gridDecorAtlasTexture;
         }
 
         private void _updateChunkDecor(
@@ -494,9 +469,9 @@ namespace Robust.Client.Graphics.Clyde
                 for (ushort y = 0; y < chunkSize; y += PatchSize)
                 {
                     var tile = chunk.GetTile(x, y);
-                    var decor = GetGridDecorType(tile);
+                    var decorRow = GetGridDecorRow(tile);
 
-                    if (decor == null)
+                    if (decorRow == null)
                         continue;
 
                     var gridX = x + chunkOriginScaled.X;
@@ -516,7 +491,7 @@ namespace Robust.Client.Graphics.Clyde
                             break;
 
                         var region = GetGridDecorAtlasRegion(
-                            decor,
+                            decorRow.Value,
                             gridX * 92821 + gridY * 68917 + cluster * 193);
 
                         i = WriteGridDecorTextureClumpToBuffers(
@@ -777,29 +752,19 @@ namespace Robust.Client.Graphics.Clyde
             }
         }
 
-        private static Box2 GetGridDecorAtlasRegion(string decor, int seed)
+        private Box2 GetGridDecorAtlasRegion(int row, int seed)
         {
-            const int Columns = 3;
-            const int Rows = 3;
+            var columns = _configuredGridDecorAtlasColumns;
+            var rows = _configuredGridDecorAtlasRows;
 
-            var variant = Math.Abs(seed) % Columns;
+            DebugTools.Assert(columns > 0);
+            DebugTools.Assert(rows > 0);
+            DebugTools.Assert(row >= 0 && row < rows);
 
-            var row = decor switch
-            {
-                "grass" => 0,
+            var variant = (int) ((uint) seed % (uint) columns);
 
-                "semi_drygrass" => 1,
-                "semi_dry_grass" => 1,
-                "semidrygrass" => 1,
-
-                "drygrass" => 2,
-                "dry_grass" => 2,
-
-                _ => 0
-            };
-
-            var cellW = 1f / Columns;
-            var cellH = 1f / Rows;
+            var cellW = 1f / columns;
+            var cellH = 1f / rows;
 
             var left = variant * cellW;
             var right = left + cellW;

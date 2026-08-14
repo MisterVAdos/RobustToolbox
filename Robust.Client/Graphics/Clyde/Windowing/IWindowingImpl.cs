@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Robust.Client.Input;
 using Robust.Shared.Maths;
@@ -29,7 +29,7 @@ namespace Robust.Client.Graphics.Clyde
             ICursor CursorCreate(Image<Rgba32> image, Vector2i hotSpot);
             void CursorSet(WindowReg window, ICursor? cursor);
 
-            void CursorSetVisible(bool visible); // WH14
+            void CursorSetVisible(bool visible);
 
             // Window API.
             (WindowReg?, string? error) WindowCreate(

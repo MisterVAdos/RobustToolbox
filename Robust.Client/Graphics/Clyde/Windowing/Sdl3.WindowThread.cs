@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -117,7 +117,7 @@ internal partial class Clyde
                     WinThreadWinCursorSet(cmd);
                     break;
 
-                case CmdCursorSetVisible cmd: // WH14
+                case CmdCursorSetVisible cmd:
                     WinThreadCursorSetVisible(cmd);
                     break;
 
@@ -313,7 +313,7 @@ internal partial class Clyde
             public ClydeHandle Cursor;
         }
 
-        private sealed class CmdCursorSetVisible : CmdBase // WH14
+        private sealed class CmdCursorSetVisible : CmdBase
         {
             public bool Visible;
         }

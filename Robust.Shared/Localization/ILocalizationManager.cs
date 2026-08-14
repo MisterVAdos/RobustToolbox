@@ -23,7 +23,7 @@ namespace Robust.Shared.Localization
     [NotContentImplementable]
     public interface ILocalizationManager
     {
-        event Action? OnLanguageChanged; // WH14event Action<string>? OnLanguageChanged;
+        event Action? OnLanguageChanged;
 
         /// <summary>
         ///     Gets a language appropriate string represented by the supplied messageId.

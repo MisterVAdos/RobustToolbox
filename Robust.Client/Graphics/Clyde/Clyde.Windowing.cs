@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
@@ -455,7 +455,7 @@ namespace Robust.Client.Graphics.Clyde
             _windowing!.CursorSet(_mainWindow!, cursor);
         }
 
-        public void SetCursorVisible(bool visible) // WH14
+        public void SetCursorVisible(bool visible)
         {
             DebugTools.AssertNotNull(_windowing);
 

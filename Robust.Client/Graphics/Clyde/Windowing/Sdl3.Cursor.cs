@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Robust.Client.Utility;
 using Robust.Shared.Maths;
@@ -77,7 +77,7 @@ internal partial class Clyde
             SendCmd(new CmdWinCursorSet { Window = reg.Sdl3Window, Cursor = impl.Id });
         }
 
-        public void CursorSetVisible(bool visible) // WH14
+        public void CursorSetVisible(bool visible)
         {
             SendCmd(new CmdCursorSetVisible { Visible = visible });
         }
@@ -88,7 +88,7 @@ internal partial class Clyde
                 SDL.SDL_ShowCursor();
             else
                 SDL.SDL_HideCursor();
-        } // WH14-end
+        }
 
         private void WinThreadWinCursorSet(CmdWinCursorSet cmd)
         {

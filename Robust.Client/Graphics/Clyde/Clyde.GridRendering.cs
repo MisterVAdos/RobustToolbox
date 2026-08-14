@@ -64,19 +64,18 @@ namespace Robust.Client.Graphics.Clyde
             // Grid decor wind is handled in the shader, so the decor mesh does not need
             // to be rebuilt when wind parameters change.
 
-            if (!_mapManager.MapExists(mapId))
+            if (!_mapSystem.MapExists(mapId))
             {
                 // fall back to nullspace map
                 mapId = MapId.Nullspace;
             }
 
             _grids.Clear();
-            _mapManager.FindGridsIntersecting(mapId, worldBounds, ref _grids);
+            _mapSystem.FindGridsIntersecting(mapId, worldBounds, ref _grids);
 
             var requiresFlush = true;
             GLShaderProgram gridProgram = default!;
             var gridOverlays = GetOverlaysForSpace(OverlaySpace.WorldSpaceGrids);
-            var mapSystem = _entityManager.System<SharedMapSystem>();
 
             foreach (var mapGrid in _grids)
             {
@@ -97,8 +96,16 @@ namespace Robust.Client.Graphics.Clyde
                     gridProgram.SetUniform(UniIModUV, new Vector4(0, 0, 1, 1));
                 }
 
-                gridProgram.SetUniform(UniIModelMatrix, _transformSystem.GetWorldMatrix(mapGrid));
-                var enumerator = mapSystem.GetMapChunks(mapGrid.Owner, mapGrid.Comp, worldBounds);
+                var matrix = _transformSystem.GetWorldMatrix(mapGrid);
+                matrix.Translation += GetPixelSnapOffset(
+                    matrix.Translation,
+                    eye.Position.Position + eye.Offset,
+                    eye.Rotation,
+                    eye.Scale * viewport.RenderScale *
+                        new Vector2(EyeManager.PixelsPerMeter, -EyeManager.PixelsPerMeter),
+                    viewport.Size);
+                gridProgram.SetUniform(UniIModelMatrix, matrix);
+                var enumerator = _mapSystem.GetMapChunks(mapGrid.Owner, mapGrid.Comp, worldBounds);
 
                 // Handle base texture updates.
                 while (enumerator.MoveNext(out var chunk))
@@ -143,7 +150,7 @@ namespace Robust.Client.Graphics.Clyde
                 // Handle edge sprites.
                 if (_drawTileEdges)
                 {
-                    enumerator = mapSystem.GetMapChunks(mapGrid.Owner, mapGrid.Comp, worldBounds);
+                    enumerator = _mapSystem.GetMapChunks(mapGrid.Owner, mapGrid.Comp, worldBounds);
                     while (enumerator.MoveNext(out var chunk))
                     {
                         var datum = data[chunk.Indices];
@@ -152,7 +159,7 @@ namespace Robust.Client.Graphics.Clyde
                     }
                 }
 
-                enumerator = mapSystem.GetMapChunks(mapGrid.Owner, mapGrid.Comp, worldBounds);
+                enumerator = _mapSystem.GetMapChunks(mapGrid.Owner, mapGrid.Comp, worldBounds);
 
                 // Draw chunks
                 while (enumerator.MoveNext(out var chunk))
